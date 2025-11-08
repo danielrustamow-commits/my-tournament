@@ -169,6 +169,32 @@
             font-style: italic;
         }
 
+        .player-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .player-item {
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .remove-player {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 3px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
         @media (max-width: 768px) {
             .tournament-container {
                 flex-direction: column;
@@ -203,15 +229,6 @@
         let players = JSON.parse(localStorage.getItem('tournamentPlayers')) || [];
         let matches = JSON.parse(localStorage.getItem('tournamentMatches')) || {};
 
-        // Названия раундов
-        const roundNames = [
-            "1/8 финала", 
-            "1/4 финала", 
-            "1/2 финала", 
-            "Финал",
-            "Чемпион"
-        ];
-
         function saveData() {
             localStorage.setItem('tournamentPlayers', JSON.stringify(players));
             localStorage.setItem('tournamentMatches', JSON.stringify(matches));
@@ -226,13 +243,13 @@
                 return;
             }
 
-            if (players.length >= 8) {
-                alert('Максимум 8 участников для этой сетки!');
-                return;
-            }
-
             players.push(playerName);
             document.getElementById('playerName').value = '';
+            saveData();
+        }
+
+        function removePlayer(index) {
+            players.splice(index, 1);
             saveData();
         }
 
@@ -245,28 +262,36 @@
             // Очищаем предыдущие матчи
             matches = {};
             
-            // Создаем начальные матчи для 1/8 финала
+            // Вычисляем количество раундов
+            const roundsCount = Math.ceil(Math.log2(players.length));
+            
+            // Создаем начальные матчи для первого раунда
             const initialMatches = [];
             const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
             
-            for (let i = 0; i < Math.ceil(shuffledPlayers.length / 2); i++) {
-                const player1 = shuffledPlayers[i * 2] || null;
-                const player2 = shuffledPlayers[i * 2 + 1] || null;
+            // Дополняем список участников до степени двойки пустыми слотами
+            const bracketSize = Math.pow(2, roundsCount);
+            const playersWithByes = [...shuffledPlayers];
+            while (playersWithByes.length < bracketSize) {
+                playersWithByes.push(null);
+            }
+            
+            for (let i = 0; i < playersWithByes.length / 2; i++) {
+                const player1 = playersWithByes[i * 2];
+                const player2 = playersWithByes[i * 2 + 1];
                 
-                if (player1 || player2) {
-                    initialMatches.push({
-                        id: `round0_match${i}`,
-                        player1: player1,
-                        player2: player2,
-                        winner: null
-                    });
-                }
+                initialMatches.push({
+                    id: `round0_match${i}`,
+                    player1: player1,
+                    player2: player2,
+                    winner: null
+                });
             }
             
             matches['round0'] = initialMatches;
             
             // Создаем пустые матчи для последующих раундов
-            for (let round = 1; round < 4; round++) {
+            for (let round = 1; round <= roundsCount; round++) {
                 const roundMatches = [];
                 const prevRoundMatches = matches[`round${round-1}`] || [];
                 const matchCount = Math.ceil(prevRoundMatches.length / 2);
@@ -295,7 +320,7 @@
                 match.winner = winner;
                 
                 // Обновляем следующий раунд
-                if (round < 3) {
+                if (matches[`round${round + 1}`]) {
                     const nextRound = round + 1;
                     const nextMatchIndex = Math.floor(parseInt(matchIndex.replace('match', '')) / 2);
                     const nextMatch = matches[`round${nextRound}`][nextMatchIndex];
@@ -319,6 +344,25 @@
             }
         }
 
+        function getRoundName(roundIndex, totalRounds) {
+            const roundNames = [
+                "Финал",
+                "1/2 финала",
+                "1/4 финала",
+                "1/8 финала",
+                "1/16 финала",
+                "1/32 финала",
+                "1/64 финала"
+            ];
+            
+            if (roundIndex === totalRounds - 1) {
+                return "Финал";
+            }
+            
+            const index = totalRounds - roundIndex - 1;
+            return roundNames[index] || `Раунд ${roundIndex + 1}`;
+        }
+
         function updateDisplay() {
             const bracket = document.getElementById('tournamentBracket');
             bracket.innerHTML = '';
@@ -326,12 +370,13 @@
             // Показываем список участников, если сетка еще не сгенерирована
             if (Object.keys(matches).length === 0) {
                 bracket.innerHTML = `
-                    <div style="padding: 20px; text-align: center;">
-                        <h3>Участники турнира (${players.length}/8)</h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
-                            ${players.map(player => `
-                                <div style="background: #ecf0f1; padding: 10px; border-radius: 5px; text-align: center;">
+                    <div style="padding: 20px; text-align: center; width: 100%;">
+                        <h3>Участники турнира (${players.length})</h3>
+                        <div class="player-list">
+                            ${players.map((player, index) => `
+                                <div class="player-item">
                                     ${player}
+                                    <button class="remove-player" onclick="removePlayer(${index})">Удалить</button>
                                 </div>
                             `).join('')}
                         </div>
@@ -342,13 +387,15 @@
             }
 
             // Отображаем турнирную сетку
-            for (let round = 0; round < 4; round++) {
+            const totalRounds = Object.keys(matches).length;
+            
+            for (let round = 0; round < totalRounds; round++) {
                 const roundMatches = matches[`round${round}`] || [];
                 const roundElement = document.createElement('div');
                 roundElement.className = 'round';
                 
                 roundElement.innerHTML = `
-                    <div class="round-title">${roundNames[round]}</div>
+                    <div class="round-title">${getRoundName(round, totalRounds)}</div>
                     ${roundMatches.map(match => `
                         <div class="match ${match.winner ? 'winner' : ''}" onclick="openMatchDialog('${match.id}')">
                             <div class="player ${match.winner === match.player1 ? 'winner' : ''}">
@@ -371,12 +418,13 @@
             }
 
             // Отображаем чемпиона
-            const finalMatch = matches['round3'] ? matches['round3'][0] : null;
+            const lastRound = totalRounds - 1;
+            const finalMatch = matches[`round${lastRound}`] ? matches[`round${lastRound}`][0] : null;
             if (finalMatch && finalMatch.winner) {
                 const championElement = document.createElement('div');
                 championElement.className = 'round';
                 championElement.innerHTML = `
-                    <div class="round-title">${roundNames[4]}</div>
+                    <div class="round-title">Чемпион</div>
                     <div class="champion">
                         🏆 ${finalMatch.winner} 🏆<br>
                         <span style="font-size: 1rem;">Победитель турнира!</span>
@@ -390,8 +438,12 @@
             const match = Object.values(matches).flat().find(m => m.id === matchId);
             if (!match || (!match.player1 && !match.player2)) return;
 
+            let options = '';
+            if (match.player1) options += `1 - ${match.player1}\n`;
+            if (match.player2) options += `2 - ${match.player2}\n`;
+
             const winner = prompt(
-                `Выберите победителя в матче:\n${match.player1 || 'Пусто'} vs ${match.player2 || 'Пусто'}\n\nВведите 1 для ${match.player1 || 'игрока 1'}\nВведите 2 для ${match.player2 || 'игрока 2'}`,
+                `Выберите победителя в матче:\n${match.player1 || 'Пусто'} vs ${match.player2 || 'Пусто'}\n\n${options}`,
                 match.winner ? (match.winner === match.player1 ? '1' : '2') : ''
             );
 
