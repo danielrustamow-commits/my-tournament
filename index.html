@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Турнирная сетка - Мой Турнир</title>
+    <meta name="description" content="Организуйте турниры с автоматической сеткой">
+    <style>
+        /* Все стили из предыдущего кода */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        /* ... остальные стили ... */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Турнирная сетка</h1>
+            <p>Система плей-офф до одного победителя</p>
+        </header>
+
+        <div class="controls">
+            <input type="text" id="playerName" placeholder="Имя участника">
+            <button onclick="addPlayer()">Добавить участника</button>
+            <button onclick="generateBracket()" class="winner-btn">Сгенерировать сетку</button>
+            <button onclick="resetTournament()" class="delete-btn">Новый турнир</button>
+        </div>
+
+        <div class="tournament-container" id="tournamentBracket">
+            <!-- Сетка генерируется здесь -->
+        </div>
+        
+        <footer style="text-align: center; padding: 20px; color: #7f8c8d;">
+            <p>Турнирный менеджер © 2024</p>
+        </footer>
+    </div>
+
+    <script>
+        // JavaScript код из предыдущего примера
+        let players = JSON.parse(localStorage.getItem('tournamentPlayers')) || [];
+        let matches = JSON.parse(localStorage.getItem('tournamentMatches')) || {};
+
+        // ... весь остальной JavaScript код ...
+    </script>
+</body>
+</html>
