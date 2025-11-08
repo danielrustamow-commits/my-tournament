@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Турнирная сетка - Мой Турнир</title>
-    <meta name="description" content="Организуйте турниры с автоматической сеткой">
+    <title>Турнирная сетка</title>
     <style>
-        /* Все стили из предыдущего кода */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -28,8 +26,158 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             overflow: hidden;
         }
-        
-        /* ... остальные стили ... */
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .tournament-container {
+            display: flex;
+            padding: 20px;
+            gap: 10px;
+            overflow-x: auto;
+        }
+
+        .round {
+            flex: 1;
+            min-width: 200px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .round-title {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #bdc3c7;
+            font-weight: bold;
+        }
+
+        .match {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .match:hover {
+            border-color: #3498db;
+            transform: translateY(-2px);
+        }
+
+        .match.winner {
+            border-color: #27ae60;
+            background: #d5f4e6;
+        }
+
+        .player {
+            padding: 8px 5px;
+            margin: 3px 0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .player.winner {
+            background: #27ae60;
+            color: white;
+            font-weight: bold;
+        }
+
+        .vs {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #34495e;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        input, button {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 200px;
+            background: #ecf0f1;
+        }
+
+        button {
+            background: #e74c3c;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #c0392b;
+        }
+
+        .winner-btn {
+            background: #27ae60;
+        }
+
+        .winner-btn:hover {
+            background: #219652;
+        }
+
+        .delete-btn {
+            background: #95a5a6;
+        }
+
+        .delete-btn:hover {
+            background: #7f8c8d;
+        }
+
+        .champion {
+            text-align: center;
+            padding: 20px;
+            background: #f39c12;
+            color: white;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .empty-slot {
+            color: #95a5a6;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .tournament-container {
+                flex-direction: column;
+            }
+            
+            .round {
+                min-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -47,20 +195,217 @@
         </div>
 
         <div class="tournament-container" id="tournamentBracket">
-            <!-- Сетка генерируется здесь -->
+            <!-- Сетка будет генерироваться здесь -->
         </div>
-        
-        <footer style="text-align: center; padding: 20px; color: #7f8c8d;">
-            <p>Турнирный менеджер © 2024</p>
-        </footer>
     </div>
 
     <script>
-        // JavaScript код из предыдущего примера
         let players = JSON.parse(localStorage.getItem('tournamentPlayers')) || [];
         let matches = JSON.parse(localStorage.getItem('tournamentMatches')) || {};
 
-        // ... весь остальной JavaScript код ...
+        // Названия раундов
+        const roundNames = [
+            "1/8 финала", 
+            "1/4 финала", 
+            "1/2 финала", 
+            "Финал",
+            "Чемпион"
+        ];
+
+        function saveData() {
+            localStorage.setItem('tournamentPlayers', JSON.stringify(players));
+            localStorage.setItem('tournamentMatches', JSON.stringify(matches));
+            updateDisplay();
+        }
+
+        function addPlayer() {
+            const playerName = document.getElementById('playerName').value.trim();
+            
+            if (!playerName) {
+                alert('Введите имя участника!');
+                return;
+            }
+
+            if (players.length >= 8) {
+                alert('Максимум 8 участников для этой сетки!');
+                return;
+            }
+
+            players.push(playerName);
+            document.getElementById('playerName').value = '';
+            saveData();
+        }
+
+        function generateBracket() {
+            if (players.length < 2) {
+                alert('Нужно как минимум 2 участника для создания сетки!');
+                return;
+            }
+
+            // Очищаем предыдущие матчи
+            matches = {};
+            
+            // Создаем начальные матчи для 1/8 финала
+            const initialMatches = [];
+            const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+            
+            for (let i = 0; i < Math.ceil(shuffledPlayers.length / 2); i++) {
+                const player1 = shuffledPlayers[i * 2] || null;
+                const player2 = shuffledPlayers[i * 2 + 1] || null;
+                
+                if (player1 || player2) {
+                    initialMatches.push({
+                        id: `round0_match${i}`,
+                        player1: player1,
+                        player2: player2,
+                        winner: null
+                    });
+                }
+            }
+            
+            matches['round0'] = initialMatches;
+            
+            // Создаем пустые матчи для последующих раундов
+            for (let round = 1; round < 4; round++) {
+                const roundMatches = [];
+                const prevRoundMatches = matches[`round${round-1}`] || [];
+                const matchCount = Math.ceil(prevRoundMatches.length / 2);
+                
+                for (let i = 0; i < matchCount; i++) {
+                    roundMatches.push({
+                        id: `round${round}_match${i}`,
+                        player1: null,
+                        player2: null,
+                        winner: null
+                    });
+                }
+                
+                matches[`round${round}`] = roundMatches;
+            }
+            
+            saveData();
+        }
+
+        function setWinner(matchId, winner) {
+            const [roundStr, matchIndex] = matchId.split('_');
+            const round = parseInt(roundStr.replace('round', ''));
+            const match = matches[roundStr].find(m => m.id === matchId);
+            
+            if (match) {
+                match.winner = winner;
+                
+                // Обновляем следующий раунд
+                if (round < 3) {
+                    const nextRound = round + 1;
+                    const nextMatchIndex = Math.floor(parseInt(matchIndex.replace('match', '')) / 2);
+                    const nextMatch = matches[`round${nextRound}`][nextMatchIndex];
+                    
+                    if (parseInt(matchIndex.replace('match', '')) % 2 === 0) {
+                        nextMatch.player1 = winner;
+                    } else {
+                        nextMatch.player2 = winner;
+                    }
+                }
+                
+                saveData();
+            }
+        }
+
+        function resetTournament() {
+            if (confirm('Начать новый турнир? Все текущие данные будут удалены.')) {
+                players = [];
+                matches = {};
+                saveData();
+            }
+        }
+
+        function updateDisplay() {
+            const bracket = document.getElementById('tournamentBracket');
+            bracket.innerHTML = '';
+
+            // Показываем список участников, если сетка еще не сгенерирована
+            if (Object.keys(matches).length === 0) {
+                bracket.innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <h3>Участники турнира (${players.length}/8)</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 15px;">
+                            ${players.map(player => `
+                                <div style="background: #ecf0f1; padding: 10px; border-radius: 5px; text-align: center;">
+                                    ${player}
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${players.length >= 2 ? '<p style="margin-top: 15px; color: #27ae60;">Нажмите "Сгенерировать сетку" чтобы начать турнир!</p>' : ''}
+                    </div>
+                `;
+                return;
+            }
+
+            // Отображаем турнирную сетку
+            for (let round = 0; round < 4; round++) {
+                const roundMatches = matches[`round${round}`] || [];
+                const roundElement = document.createElement('div');
+                roundElement.className = 'round';
+                
+                roundElement.innerHTML = `
+                    <div class="round-title">${roundNames[round]}</div>
+                    ${roundMatches.map(match => `
+                        <div class="match ${match.winner ? 'winner' : ''}" onclick="openMatchDialog('${match.id}')">
+                            <div class="player ${match.winner === match.player1 ? 'winner' : ''}">
+                                ${match.player1 || '<span class="empty-slot">Ждет соперника</span>'}
+                            </div>
+                            <div class="vs">VS</div>
+                            <div class="player ${match.winner === match.player2 ? 'winner' : ''}">
+                                ${match.player2 || '<span class="empty-slot">Ждет соперника</span>'}
+                            </div>
+                            ${match.winner ? `
+                                <div style="text-align: center; margin-top: 5px; font-size: 12px; color: #27ae60;">
+                                    ✓ Победитель: ${match.winner}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                `;
+                
+                bracket.appendChild(roundElement);
+            }
+
+            // Отображаем чемпиона
+            const finalMatch = matches['round3'] ? matches['round3'][0] : null;
+            if (finalMatch && finalMatch.winner) {
+                const championElement = document.createElement('div');
+                championElement.className = 'round';
+                championElement.innerHTML = `
+                    <div class="round-title">${roundNames[4]}</div>
+                    <div class="champion">
+                        🏆 ${finalMatch.winner} 🏆<br>
+                        <span style="font-size: 1rem;">Победитель турнира!</span>
+                    </div>
+                `;
+                bracket.appendChild(championElement);
+            }
+        }
+
+        function openMatchDialog(matchId) {
+            const match = Object.values(matches).flat().find(m => m.id === matchId);
+            if (!match || (!match.player1 && !match.player2)) return;
+
+            const winner = prompt(
+                `Выберите победителя в матче:\n${match.player1 || 'Пусто'} vs ${match.player2 || 'Пусто'}\n\nВведите 1 для ${match.player1 || 'игрока 1'}\nВведите 2 для ${match.player2 || 'игрока 2'}`,
+                match.winner ? (match.winner === match.player1 ? '1' : '2') : ''
+            );
+
+            if (winner === '1' && match.player1) {
+                setWinner(matchId, match.player1);
+            } else if (winner === '2' && match.player2) {
+                setWinner(matchId, match.player2);
+            } else if (winner) {
+                alert('Некорректный ввод! Введите 1 или 2.');
+            }
+        }
+
+        // Загружаем данные при старте
+        updateDisplay();
     </script>
 </body>
 </html>
